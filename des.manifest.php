@@ -2,7 +2,7 @@
 header("Content-Type: text/cache-manifest");
 ?>
 CACHE MANIFEST
-# rev 1 
+# rev 1.0 
 des_logo.png
 
 NETWORK:

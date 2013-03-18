@@ -1,7 +1,6 @@
 <html manifest="des.manifest.php">
 <head>
 <title>DES Tariff Calculator</title>
-	
 	<!-- mobile viewport -->
 	<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0,user-scalable=no" />
     
@@ -164,7 +163,7 @@
 		<th>Units (kWh)</th>
 	</tr>
 	</table>
-<input id="btnClearAll" type="button" value="Clear">	
+	<input id="btnClearAll" type="button" value="Clear"><label for="btnClearAll" id="lblClearAll">detecting online/offline...</label>
 
 
 	<table border='1' id="cost_table">
@@ -209,96 +208,132 @@
 <script>
 	function id(id) { return document.getElementById(id); }
 
-	// clear existing entries
-	function clearAll(){
-		var paid;
-		for(var i = 0; paid = id("paid"+i); i++){
-			paid.value = "";
-			id("units"+i).innerHTML = "";
-		}
-		id("paidTotal").innerHTML = "0";
-		id("unitsTotal").innerHTML = "0";
-		APP.db.deleteAll(); // delete offline storage
-	}
 
-	// returns number of units for amount paidInCents
-	// previousAmount should total amount paid so far in the month
-	function amountToUnits(paidInCents, previousAmountInCents){
-		var paid = paidInCents;
-		if(paid <= 600){
-			units = paid;
+	APP = (function(){
+		// clear existing entries
+		function clearAll(){
+			var paid;
+			for(var i = 0; paid = id("paid"+i); i++){
+				paid.value = "";
+				id("units"+i).innerHTML = "";
+			}
+			id("paidTotal").innerHTML = "0";
+			id("unitsTotal").innerHTML = "0";
+			APP.db.deleteAll(); // delete offline storage
 		}
-		else if(paid <= 11800){
-			units = ((paid - 600) / 8 + 600);
-		}
-		else if(paid <= 31800){
-			units = ((paid - 11800) / 10 + 2000);
-		}
-		else {
-			units = ((paid - 31800) / 12 + 4000);
-		}
-		if(previousAmountInCents)
-			units -= amountToUnits(previousAmountInCents);
-		return units;
-	}
 
-	// update total amount paid and units received
-	function calculate(){
-		var total_paid = 0;
-		var total_units = 0;
-		var paid;
-		for(var i = 0; paid = id("paid"+i); i++){
-			APP.db.add("paid" + i, paid.value); // save to offline storage
-			if(paid.value && !isNaN(paid.value)){
-				var amount = parseFloat(paid.value);
-				var old_total = total_paid;
-				total_paid += amount;
-				var units = amountToUnits(total_paid*100, old_total*100);
-				total_units += units;
-				id("units"+i).innerHTML = Math.round(units) + "";
-			}else
-				id("units"+i).innerHTML = '';
+		// returns number of units for amount paidInCents
+		// previousAmount should total amount paid so far in the month
+		function amountToUnits(paidInCents, previousAmountInCents){
+			var paid = paidInCents;
+			if(paid <= 600){
+				units = paid;
+			}
+			else if(paid <= 11800){
+				units = ((paid - 600) / 8 + 600);
+			}
+			else if(paid <= 31800){
+				units = ((paid - 11800) / 10 + 2000);
+			}
+			else {
+				units = ((paid - 31800) / 12 + 4000);
+			}
+			if(previousAmountInCents)
+				units -= amountToUnits(previousAmountInCents);
+			return units;
 		}
-		id("paidTotal").innerHTML = total_paid.toFixed(2);
-		id("unitsTotal").innerHTML = Math.round(total_units);
-	}
-	
-	// template for a transaction row
-	function transactionTemplate(i){
-			return ''+
-			'<tr>' +
-			'<td>#'+(i+1)+ '</td>' + 
-			'<td><input size="4" id="paid'+i+'" name="paid'+i+'" type="number" class="paid"></td>'+
-			'<td><span id="units'+i+'" name="units'+i+'" type="text" class="unit"></span></td>'+
-			'</tr>'+
-			'';
-	}
-	function addTransaction()
-	{
-		var i = 0;
-		for(i = 0; paid = id("paid"+i); i++);
-	
-		id("transactions").innerHTML += transactionTemplate(i);
-		id("paid"+i).onkeyup = calculate;
-		id("paid"+i).onchange = calculate;
-	}
-	
-	function addTransactions(total)
-	{
-		var msg ='';
-		for(var i =0;i<total;i++){
-			msg += transactionTemplate(i);
+
+		// update total amount paid and units received
+		function calculate(){
+			var total_paid = 0;
+			var total_units = 0;
+			var paid;
+			for(var i = 0; paid = id("paid"+i); i++){
+				APP.db.add("paid" + i, paid.value); // save to offline storage
+				if(paid.value && !isNaN(paid.value)){
+					var amount = parseFloat(paid.value);
+					var old_total = total_paid;
+					total_paid += amount;
+					var units = amountToUnits(total_paid*100, old_total*100);
+					total_units += units;
+					id("units"+i).innerHTML = Math.round(units) + "";
+				}else
+					id("units"+i).innerHTML = '';
+			}
+			id("paidTotal").innerHTML = total_paid.toFixed(2);
+			id("unitsTotal").innerHTML = Math.round(total_units);
 		}
-		id("transactions").innerHTML += msg;
 		
-		// add the javascript event bindings to the new rows added
-		for(var i =0;i<total;i++){
+		// template for a transaction row
+		function transactionTemplate(i){
+				return ''+
+				'<tr>' +
+				'<td>#'+(i+1)+ '</td>' + 
+				'<td><input size="4" id="paid'+i+'" name="paid'+i+'" type="number" class="paid"></td>'+
+				'<td><span id="units'+i+'" name="units'+i+'" type="text" class="unit"></span></td>'+
+				'</tr>'+
+				'';
+		}
+		function addTransaction()
+		{
+			var i = 0;
+			for(i = 0; paid = id("paid"+i); i++);
+		
+			id("transactions").innerHTML += transactionTemplate(i);
 			id("paid"+i).onkeyup = calculate;
 			id("paid"+i).onchange = calculate;
 		}
-	}
+		
+		function addTransactions(total)
+		{
+			var msg ='';
+			for(var i =0;i<total;i++){
+				msg += transactionTemplate(i);
+			}
+			id("transactions").innerHTML += msg;
+			
+			// add the javascript event bindings to the new rows added
+			for(var i =0;i<total;i++){
+				id("paid"+i).onkeyup = calculate;
+				id("paid"+i).onchange = calculate;
+			}
+		}
 
-	APP = {};
+
+		init = function(){
+
+			addTransactions(4);
+			id("btnClearAll").onclick = function(){clearAll()}; //
+
+			initEventListners();
+			APP.db.init();
+			calculate();
+			function updateOnlineStatus(online){
+				if(online){
+				  id("lblClearAll").innerHTML = "Online";
+				  id("lblClearAll").style.color = "#00cc00";
+				  id("lblClearAll").style.fontWeight = "bold";
+				}
+				else{
+				  id("lblClearAll").innerHTML = "Offline";
+				  id("lblClearAll").style.color = "#ff0000";
+				  id("lblClearAll").style.fontWeight = "bold";
+				}
+			}
+			// http://www.html5rocks.com/en/mobile/workingoffthegrid/
+			updateOnlineStatus(navigator.onLine);
+			function initEventListners(){
+				window.addEventListener("offline", function(e) { updateOnlineStatus();  }, false);
+				window.addEventListener("online" , function(e) { updateOnlineStatus(1); }, false);
+			}
+
+		};
+		return {
+			init: init
+		}
+	}());
+
+
 	//////////////////////////////////////////	
 	// offline storage functions - 1
 	APP.db = (function(){
@@ -310,7 +345,6 @@
 				id(str).value = localStorage[str];
 				}catch(err){}
 			}
-			calculate();
 		}
 		function add(id, value){
 			if(!localStorage) return;
@@ -332,16 +366,13 @@
 			del: del,
 			deleteAll: deleteAll
 		}
-		
 	}());
 
 	// offline storage functions - 0
 	//////////////////////////////////////////	
 	
 	// onload functions
-	addTransactions(4); 		
-	id("btnClearAll").onclick = function(){clearAll()}; //
-	APP.db.init();
+	APP.init();
 
 
 </script>
